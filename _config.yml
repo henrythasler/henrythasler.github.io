@@ -194,6 +194,7 @@ exclude:
   - LICENSE
   - README.md
   - Vagrantfile
+  - serve.sh
 
 # prose.io config
 prose:
