@@ -3,7 +3,7 @@ As [vector maps](https://en.wikipedia.org/wiki/Vector_tiles) have been really su
 
 This is what the map looks like at the moment:
 
-![rastermap](img/cyclemap-raster-current.png)
+![rastermap](/img/cyclemap-raster-current.png)
 
 As the process of presenting a vector tile map to an end-user requires a whole set of tools (aka Toolchain), I will try to cover all parts of the design- and implementation-process.
 
