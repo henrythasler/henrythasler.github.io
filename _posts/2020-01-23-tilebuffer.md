@@ -62,6 +62,14 @@ Buffer | Raw | Rendered
 
 A buffer of 128 coordinate units is already sufficient to render the motorway smoothly w/o any clipping.
 
+Most vector tile creation frameworks support definition of the buffer:
+
+Framework | Method/Parameter
+---|---
+PostGIS | [ST_AsMVTGeom()](https://postgis.net/docs/manual-dev/ST_AsMVTGeom.html)
+Tegola | [tile_buffer](https://tegola.io/documentation/configuration/#global)
+CloudTileserver | [buffer](https://github.com/henrythasler/cloud-tileserver/wiki/Layer-Definition)
+
 ## Buffer Size
 
 So what is the optimal setting for the buffer? This strongly depends on 
