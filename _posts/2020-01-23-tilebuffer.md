@@ -15,7 +15,7 @@ First we have to understand how exactly vectortiles are rendered and displayed.
 
 Similar to raster tiles, vector tiles are stitched into one big image within your browser from smaller images (tiling). The only difference is that the actual rastering (converting data to an image) of each vector tile is done in your browser (client-side) instead by a server.
 
-First, each vector tile is rendered individually onto a canvas that is larger that the actual tile. This canvas is then clipped to the actual boundingbox of the tile and stiched together with all other canvasses. 
+First, each vector tile is rendered individually onto a canvas that is larger that the actual tile. This canvas is then clipped to the actual boundingbox of the tile and stiched together with all other tiles. 
 
 ![](/img/blog/Selection_150.png)
 
@@ -51,9 +51,43 @@ But there is a simple solution!
 
 ## Buffer
 
-## Vector tiles provider
+By introducing a buffer around each vector tile during creation, features are extended beyond the tile boundaries, allowing the features of one tile to overlap with the continued feature on the next tile.
 
+Buffer | Raw | Rendered
+---|---|---|---
+0 |  ![](/img/blog/Selection_158.png) | ![](/img/blog/Selection_156.png)
+64 | ![](/img/blog/Selection_153.png) | ![](/img/blog/Selection_155.png)
+128 | ![](/img/blog/Selection_159.png) | ![](/img/blog/Selection_160.png)
+256 | ![](/img/blog/Selection_161.png) | ![](/img/blog/Selection_162.png)
 
+A buffer of 128 coordinate units is already suficcient to render the motorway smoothly w/o any clipping.
+
+## Buffer Size
+
+So what is the optimal setting for the buffer? This strongly depends on 
+1. the rendering framework (e.g. MapboxGL, Nextzen) 
+2. the style you use to render the features. Thicker lines means you need more buffer around the tile to avoid clipping artefacts.
+
+A larger buffer means that the vector tile contains more features and the filesize is increased. The difference is really small though: 
+
+buffer=0 | buffer=256 
+---|---
+114267 Bytes | 115515 Bytes
+![](/img/blog/Selection_167.png) |![](/img/blog/Selection_165.png)
+
+The filesize increases by around 1% between a buffer size of 0 and 256. So, if in doubt, increase the buffer. It will not cost you much.
+
+You should always use a small buffer around your vector tiles to ensure compatibility with the rendering framework.
+
+I suggest the following:
+
+zoom level | buffer 
+---|---
+< 15 | 64
+15 .. 17 | 128
+>17 | 256
+
+Have fun!
 
 ## References
 
