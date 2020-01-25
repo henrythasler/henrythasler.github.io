@@ -54,13 +54,13 @@ But there is a simple solution!
 By introducing a buffer around each vector tile during creation, features are extended beyond the tile boundaries, allowing the features of one tile to overlap with the continued feature on the next tile.
 
 Buffer | Raw | Rendered
----|---|---|---
-0 |  ![](/img/blog/Selection_158.png) | ![](/img/blog/Selection_156.png)
+---|---|---
+0 | ![](/img/blog/Selection_158.png) | ![](/img/blog/Selection_156.png)
 64 | ![](/img/blog/Selection_153.png) | ![](/img/blog/Selection_155.png)
 128 | ![](/img/blog/Selection_159.png) | ![](/img/blog/Selection_160.png)
 256 | ![](/img/blog/Selection_161.png) | ![](/img/blog/Selection_162.png)
 
-A buffer of 128 coordinate units is already suficcient to render the motorway smoothly w/o any clipping.
+A buffer of 128 coordinate units is already sufficient to render the motorway smoothly w/o any clipping.
 
 ## Buffer Size
 
@@ -77,15 +77,15 @@ buffer=0 | buffer=256
 
 The filesize increases by around 1% between a buffer size of 0 and 256. So, if in doubt, increase the buffer. It will not cost you much.
 
-You should always use a small buffer around your vector tiles to ensure compatibility with the rendering framework.
+You should always use a small buffer around your vector tiles to ensure compatibility with all rendering frameworks.
 
 I suggest the following:
 
 zoom level | buffer 
 ---|---
-< 15 | 64
-15 .. 17 | 128
->17 | 256
+`<15` | `64`
+`15..17` | `128`
+`>17` | `256`
 
 Have fun!
 
