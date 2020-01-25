@@ -1,11 +1,11 @@
 ---
-title: Buffer in Vectortiles
+title: Buffer around Vectortiles
 subtitle: Why invisible features are important.
 tags: [gis, maps, vectortiles]
 
 ---
 
-I was recently asked by [PetersonGIS](https://petersongis.com/), why I recommend to dynamically adjust the buffer size around vectortiles with the zoom level. I will try to explain that in this post.
+I was recently asked by [Gretchen N. Peterson](https://www.gretchenpeterson.com/), why I recommend to adjust the buffer size around vectortiles with the zoom level. I will try to explain that in this post.
 
 ## Rendering Vectortiles
 
@@ -13,7 +13,7 @@ First we have to understand how exactly vectortiles are rendered and displayed.
 
 Similar to raster tiles, vector tiles are stitched into one big image within your browser from smaller images (tiling). The only difference is that the actual rastering (converting data to an image) of each vector tile is done in your browser (client-side) instead by a server. This saves bandwidth and allows to re-use the vector tile data for different rendering styles.
 
-First, each vector tile is rendered individually onto a canvas that is larger that the actual tile. This canvas is then clipped to the actual boundingbox of the tile and stiched together with all other tiles. 
+First, each vector tile is rendered individually onto a canvas that is larger that the actual tile. This canvas is then clipped to the actual boundingbox of the tile and stitched together with all other tiles. 
 
 ![](/img/blog/Selection_150.png)
 
@@ -70,7 +70,7 @@ CloudTileserver | [buffer](https://github.com/henrythasler/cloud-tileserver/wiki
 
 ## Buffer Size
 
-A vector tile has (usually) an extend of 4096x4096 coordinate units. The buffer is also specified in coordinate units.
+A vector tile has (usually) an extend of 4096x4096 coordinate units. The buffer is also specified in coordinate units. Having a buffer of 256 coordinate units around the tile means we increase the tile area by ~26%.
 
 So what is the optimal setting for the buffer? This strongly depends on 
 1. the rendering framework (e.g. MapboxGL, Nextzen) 
