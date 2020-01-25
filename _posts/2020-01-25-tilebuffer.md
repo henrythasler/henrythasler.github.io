@@ -99,11 +99,11 @@ zoom level | buffer
 
 But what about Labels? Are they also affected by clipping and do I need to increase the buffer again to prevent issues?
 
-This depends heavily on the renderer. The [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js) renderer is doing a pretty good job with labels. Here is an example with vector tiles and zero buffer:
+This depends heavily on the renderer. The [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js) renderer is doing a pretty good job with labels. Here is an example rendered from vector tiles with no buffer at all:
 
 ![](/img/blog/Selection_170.png)
 
-The point-features with the places and name property are shown as red dots. You can see that neither clipping nor duplication happens. Most likely, Mapbox is rendering all labels separately from the other features.
+The point-features with the places and name property are shown as big red dots. You can see that neither clipping nor duplication happens. Most likely, Mapbox is rendering all labels separately from the other features and merging them later onto the canvas/texture.
 
 So you don't have to worry about labels with the Mapbox renderer. Other renderers may be different.
 
