@@ -5,8 +5,6 @@ tags: [gis, maps, vectortiles]
 
 ---
 
-## Introduction
-
 I was recently asked by [PetersonGIS](https://petersongis.com/), why I recommend to dynamically adjusting the buffer size around vectortiles with the zoom level. I will try to explain that in this post.
 
 ## Rendering Vectortiles
