@@ -103,7 +103,7 @@ This depends heavily on the renderer. The [Mapbox GL JS](https://github.com/mapb
 
 ![](/img/blog/Selection_170.png)
 
-The point-features with the places and name property are shown as red dots. You can see that neither clipping nor duplication happens. 
+The point-features with the places and name property are shown as red dots. You can see that neither clipping nor duplication happens. Most likely, Mapbox is rendering all labels separately from the other features.
 
 So you don't have to worry about labels with the Mapbox renderer. Other renderers may be different.
 
