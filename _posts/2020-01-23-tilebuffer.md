@@ -13,13 +13,13 @@ I was recently asked by [PetersonGIS](https://petersongis.com/), why I recommend
 
 First we have to understand how exactly vectortiles are rendered and displayed.
 
-Similar to raster tiles, vector tiles are stitched into one big image within your browser from smaller images (tiling). The only difference is that the actual rastering (converting data to an image) of each vector tile is done in your browser (client-side) instead by a server.
+Similar to raster tiles, vector tiles are stitched into one big image within your browser from smaller images (tiling). The only difference is that the actual rastering (converting data to an image) of each vector tile is done in your browser (client-side) instead by a server. This saves bandwidth and allows to re-use the vector tile data for different rendering styles.
 
 First, each vector tile is rendered individually onto a canvas that is larger that the actual tile. This canvas is then clipped to the actual boundingbox of the tile and stiched together with all other tiles. 
 
 ![](/img/blog/Selection_150.png)
 
-Usually, vector tiles are created with a buffer. That means the vector tile will contain data that is outside the visible area. So what will happen I we remove that buffer?
+Usually, vector tiles are created with a buffer. That means the vector tile will contain data that is outside the visible area. So what will happen if we remove that buffer?
 
 ## Clipping
 
@@ -72,6 +72,8 @@ CloudTileserver | [buffer](https://github.com/henrythasler/cloud-tileserver/wiki
 
 ## Buffer Size
 
+A vector tile has (usually) an extend of 4096x4096 coordinate units. The buffer is also specified in coordinate units.
+
 So what is the optimal setting for the buffer? This strongly depends on 
 1. the rendering framework (e.g. MapboxGL, Nextzen) 
 2. the style you use to render the features. Thicker lines means you need more buffer around the tile to avoid clipping artefacts.
@@ -85,7 +87,7 @@ buffer=0 | buffer=256
 
 The filesize increases by around 1% between a buffer size of 0 and 256. So, if in doubt, increase the buffer. It will not cost you much.
 
-You should always use a small buffer around your vector tiles to ensure compatibility with all rendering frameworks.
+You should always use a minimum buffer around your vector tiles to ensure compatibility with all rendering frameworks.
 
 I suggest the following:
 
