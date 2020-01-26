@@ -19,9 +19,9 @@ Rendered | ![](/img/blog/Selection_172.png) | ![](/img/blog/Selection_174.png)
 
 I already use zoom-dependent tables to create the vector tiles and also generalize (reduce spatial complexity) the features in lower zoom levels. So what can we do to reduce the size?
 
-## Remove identifier 
+## Identifier 
 
-Let's grab the [Vector Tile Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector) and have a look what the content of the tiles is right now:
+Let's grab the [Vector Tile Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector) and have a look what the contents of the tiles are right now:
 
 ![](/img/blog/Selection_175.png)
 
@@ -33,7 +33,7 @@ Let's check the result:
 
 ![](/img/blog/Selection_178.png)
 
-Almost all `Number` properties are gone and the size has been reduced significantly.
+Almost all `Number` properties are gone and the size has been reduced significantly:
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
@@ -41,7 +41,13 @@ Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
 IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
 **Saved Overall** | **`-20%`** | **`-21%`**
 
-Great, just by removing unused properties we have saved 20%! Let's see if we can squeeze the tiles some more.
+Great, just by removing this unused property we have saved 20%! 
+
+In some cases it might make sense to attach an ID to a feature if you need that reference to load additional information later on (e.g. `onClick()` event). Azure Maps is doing that for example:  
+
+![](/img/blog/Selection_183.png)
+
+Anyway, let's see if we can squeeze the tiles some more.
 
 ## Tile Buffer
 
@@ -52,7 +58,7 @@ Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 Raw | ![](/img/blog/Selection_179.png) | ![](/img/blog/Selection_180.png)
 Rendered | ![](/img/blog/Selection_182.png) | ![](/img/blog/Selection_181.png)
 
-There are no visual artefacts but the reduction is marginal. That was expected.
+There are no visual artefacts but the size reduction is marginal. That was expected.
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
@@ -60,6 +66,47 @@ Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
 IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
 64 coordinate unit buffer | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
 **Saved Overall** | **`-21%`** | **`-22%`**
+
+## Merge
+
+Let's look again at some other statistics of our tile:
+
+![](/img/blog/Selection_184.png)
+
+Two things can be noticed:
+
+1. The `roads` and `railway` layer contain 87% of all features.
+2. More than 95% of these features contain just 2 points.
+
+Let's pick a random road and check the database what it looks like:
+
+```SQL
+select ST_NPoints(geometry), geometry from import.roads_gen10 where ref = 'St 2345';
+```
+
+![](/img/blog/Selection_185.png)
+
+A single continuous road in this tile is made from 112 individual LineStrings where most (104) are made from only 2 points.
+
+This road encoded as vector tile:
+
+```SQL
+select
+	length(st_asmvt(q, 'roads', 4096, 'geom')) as l
+from
+	(
+	select
+		st_asmvtgeom(geometry, st_transform(st_makeenvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857), 64) as geom
+	from
+		import.roads_gen10
+	where
+		(geometry && st_transform(st_makeenvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857)) and ref = 'St 2345'
+    ) as q;
+```
+
+is 447 Bytes.
+
+
 
 ## GZIP
 
