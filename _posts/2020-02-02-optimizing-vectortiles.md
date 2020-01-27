@@ -1,6 +1,6 @@
 ---
 title: Optimizing vector tile size
-subtitle: A comprehensive guide.
+subtitle: A guided tour
 tags: [gis, maps, vectortiles]
 
 ---
@@ -81,34 +81,73 @@ Two things can be noticed:
 Let's pick a random road and check the database what it looks like:
 
 ```SQL
-select ST_NPoints(geometry), geometry from import.roads_gen10 where ref = 'St 2345';
+SELECT 
+	ST_NPoints(geometry) as points, 
+	geometry 
+FROM import.roads_gen10 
+where (geometry && ST_Transform(ST_MakeEnvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857)) AND ref = 'St 2345' order by points DESC;
 ```
 
 ![](/img/blog/Selection_185.png)
 
-A single continuous road in this tile is made from 112 individual LineStrings where most (104) are made from only 2 points.
-
-This road encoded as vector tile:
+This road encoded as vector tile in postgis:
 
 ```SQL
-select
-	length(st_asmvt(q, 'roads', 4096, 'geom')) as l
-from
+SELECT
+	length(ST_AsMVT(q, 'roads', 4096, 'geom')) as length
+FROM
 	(
-	select
-		st_asmvtgeom(geometry, st_transform(st_makeenvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857), 64) as geom
-	from
+	SELECT
+		ST_AsMVTGeom(
+			geometry,
+			ST_Transform(ST_MakeEnvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857), 
+			64) AS geom
+	FROM
 		import.roads_gen10
-	where
-		(geometry && st_transform(st_makeenvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857)) and ref = 'St 2345'
-    ) as q;
+	WHERE
+		(geometry && ST_Transform(ST_MakeEnvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857))
+		AND ref = 'St 2345' ) AS q;
+```
+results in:
+```
+Name  |Value|
+------|-----|
+length|447  |
 ```
 
-is 447 Bytes.
+So a single (continuous) road in this tile is made from 112 individual LineStrings where most (104) are made from only 2 points. Encode as a vector tile, this road is 447 bytes.
+
+What happens if we `ST_LineMerge()` the individual 2-point `LINESTRING`s into one big `MULTILINESTRING`?
+
+```SQL
+SELECT
+	length(ST_AsMVT(q, 'roads', 4096, 'geom')) as length
+FROM
+	(
+	SELECT
+		ST_AsMVTGeom(
+			ST_LineMerge( ST_Collect(geometry) ),
+			ST_Transform(ST_MakeEnvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857), 
+			64) AS geom
+	FROM
+		import.roads_gen10
+	WHERE
+		(geometry && ST_Transform(ST_MakeEnvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857))
+		AND ref = 'St 2345' ) AS q;
+```
+results in:
+```
+Name  |Value|
+------|-----|
+length|102  |
+```
+**What!?** 😮 Simply by merging the `LINESTRING`s lossless into a `MULTILINESTRING` we can reduce the size by 75%. I really can't believe that. Let's modify my [cloud-tileserver](https://github.com/henrythasler/cloud-tileserver) to see what that is worth in a real-life scenario.
 
 
 
 ## GZIP
+
+## Summary
 
 ## References
 
