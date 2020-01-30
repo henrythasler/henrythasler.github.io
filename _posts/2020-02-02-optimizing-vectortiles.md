@@ -141,9 +141,20 @@ Name  |Value|
 ------|-----|
 length|102  |
 ```
-**What!?** 😮 Simply by merging the `LINESTRING`s lossless into a `MULTILINESTRING` we can reduce the size by 75%. I really can't believe that. Let's modify my [cloud-tileserver](https://github.com/henrythasler/cloud-tileserver) to see what that is worth in a real-life scenario.
+**What!?** 😮 Simply by merging the `LINESTRING`s lossless into a `MULTILINESTRING` we can reduce the size by 75%. I really can't believe that. Let's modify my [cloud-tileserver](https://github.com/henrythasler/cloud-tileserver) to see what that is worth in a real-life scenario:
 
+![](/img/blog/Selection_190.png)
 
+Yes, much less but larger Features. Exactly what we want. And the size reduction is outstanding, especially with low zoom levels:
+
+Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
+---|---|---
+Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
+IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
+64 coordinate unit buffer | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
+Merge Lines | `35 KiB (35302 Bytes)` | `74 KiB (75548 Bytes)`
+
+**Saved Overall** | **`-46%`** | **`-79%`**
 
 ## GZIP
 
