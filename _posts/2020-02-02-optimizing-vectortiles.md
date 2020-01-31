@@ -7,6 +7,16 @@ tags: [gis, maps, vectortiles]
 
 In my [Observable Vector Tile Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector) I evaluate different vector tile provider regarding the tilesize they deliver. The limits I chose are ~~purely random~~ based on long experience... But what would one do to actually reduce the tile size. I will try to optimize [my own vector tiles](https://cyclemap.link) and explain the steps involved.
 
+## TL;DR
+
+By applying various different methods, we can reduce the size of a given vector tile significantly. The methods described below are:
+
+- [Remove Identifier](#Identifier)
+- [Tile Buffer](#Tile%20Buffer)
+
+The overall reduction is up to XXXXXXXXX
+
+
 ## Status Quo
 
 Let's pick two tiles at different zoom levels and see how big they are:
@@ -39,7 +49,7 @@ Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
 Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
 IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
-**Saved Overall** | **`-20%`** | **`-21%`**
+reduction | **20%** | **21%**
 
 Great, just by removing this unused property we have saved 20%! 
 
@@ -62,10 +72,9 @@ There are no visual artefacts but the size reduction is marginal. That was expec
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
-Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
-IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
+previous step | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
 64 coordinate unit buffer | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
-**Saved Overall** | **`-21%`** | **`-22%`**
+reduction | **2%** | **1%**
 
 ## Merge
 
@@ -145,20 +154,44 @@ length|102  |
 
 ![](/img/blog/Selection_190.png)
 
-Yes, much less but larger Features. Exactly what we want. And the size reduction is outstanding, especially with low zoom levels:
+Yes, it works! We now have fewer but larger Features. Exactly what we want. We can merge some other line features (e.g. `waterways`) as well.
+
+But this method is not limited to lines. We can also `ST_Union()` all the building-polygons into one big multipolygon. The size reduction is outstanding, especially with low zoom levels:
+
+Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
+---|---|---
+previous step | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
+Merge Features | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
+reduction | **38%** | **74%**
+
+To use this feature, you need to specify a new layer-property (`geom_query`) and also a `GROUP BY` statement for all keys:
+
+![](/img/blog/Selection_191.png)
+
+## GZIP
+
+After reducing the encoded size of the vector tiles, we can further reduce the size by applying a compression algorithm. 
+
+![](/img/blog/Selection_192.png)
+
+Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
+---|---|---
+previous step | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
+gzipped | `22 KiB (22382 Bytes)` | `49 KiB (50061 Bytes)`
+reduction | **29%** | **32%**
+
+This will not only help to save storage costs but also reduce the load time for the end-user.
+
+## Summary
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
 Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
 IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
 64 coordinate unit buffer | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
-Merge Lines | `35 KiB (35302 Bytes)` | `74 KiB (75548 Bytes)`
-
-**Saved Overall** | **`-46%`** | **`-79%`**
-
-## GZIP
-
-## Summary
+Merge Features | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
+gzipped | `22 KiB (22382 Bytes)` | `49 KiB (50061 Bytes)`
+saved overall | **66%** | **86%**
 
 ## References
 
