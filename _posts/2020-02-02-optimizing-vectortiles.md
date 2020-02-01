@@ -5,20 +5,18 @@ tags: [gis, maps, vectortiles]
 
 ---
 
-In my [Observable Vector Tile Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector) I evaluate different vector tile provider regarding the tilesize they deliver. The limits I chose are ~~purely random~~ based on long experience... But what would one do to actually reduce the tile size. I will try to optimize [my own vector tiles](https://cyclemap.link) and explain the steps involved. 
+In my [Observable Vector Tile Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector) I evaluate different vector tile provider regarding the tilesize they deliver. The limits I chose are ~~purely random~~ based on long experience... But what would one do to actually reduce the tile size. I will try to optimize [my own vector tiles](https://cyclemap.link) and explain the steps involved.
 
 I assume that all spatial data is available via a [postgis](https://postgis.net/) database in web mercator ([EPSG:3857](https://epsg.io/3857)) projection.
 
 ## TL;DR
 
-By applying various different methods, we can reduce the size of a given vector tile significantly. The methods described below are:
+By applying different methods, we can reduce the size of a given vector tile to just **14% of the original size**. The methods described below are:
 
-- [Remove Identifier](#Identifier)
-- [Tile Buffer](#Tile%20Buffer)
-- [Merge Features](#Merge)
+- [Remove unused data](#Identifier)
+- [Reduce tile buffer](#Tile%20Buffer)
+- [Merge features](#Merge)
 - [Compression](#GZIP)
-
-The overall lossless size reduction is up to 86%.
 
 ## Status Quo
 
@@ -201,6 +199,17 @@ Merge Features | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
 saved | **52%** | **79%**
 gzipped | `22 KiB (22382 Bytes)` | `49 KiB (50061 Bytes)`
 saved overall | **66%** | **86%**
+
+The rendered tiles show some minor differences, mostly due to some features being ordered differently:
+
+Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
+---|---|---
+Original | ![](/img/blog/Selection_172.png) | ![](/img/blog/Selection_174.png)
+Optimized | ![](/img/blog/Selection_195.png) | ![](/img/blog/Selection_196.png)
+
+By analyzing the existing vector tiles and spatial data in the database, we were able to significantly reduce the size of a vector tile without reducing the visual experience. The methods shown should be applicable to almost any vector tile server available.
+
+I'm looking forward for more ideas on how to reduce the size even more.
 
 ## References
 
