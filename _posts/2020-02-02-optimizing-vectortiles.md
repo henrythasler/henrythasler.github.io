@@ -5,7 +5,9 @@ tags: [gis, maps, vectortiles]
 
 ---
 
-In my [Observable Vector Tile Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector) I evaluate different vector tile provider regarding the tilesize they deliver. The limits I chose are ~~purely random~~ based on long experience... But what would one do to actually reduce the tile size. I will try to optimize [my own vector tiles](https://cyclemap.link) and explain the steps involved.
+In my [Observable Vector Tile Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector) I evaluate different vector tile provider regarding the tilesize they deliver. The limits I chose are ~~purely random~~ based on long experience... But what would one do to actually reduce the tile size. I will try to optimize [my own vector tiles](https://cyclemap.link) and explain the steps involved. 
+
+I assume that all spatial data is available via a [postgis](https://postgis.net/) database in web mercator ([EPSG:3857](https://epsg.io/3857)) projection.
 
 ## TL;DR
 
@@ -13,9 +15,10 @@ By applying various different methods, we can reduce the size of a given vector 
 
 - [Remove Identifier](#Identifier)
 - [Tile Buffer](#Tile%20Buffer)
+- [Merge Features](#Merge)
+- [Compression](#GZIP)
 
-The overall reduction is up to XXXXXXXXX
-
+The overall lossless size reduction is up to 86%.
 
 ## Status Quo
 
@@ -110,7 +113,8 @@ FROM
 		ST_AsMVTGeom(
 			geometry,
 			ST_Transform(ST_MakeEnvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857), 
-			64) AS geom
+			4096, 
+			0) AS geom
 	FROM
 		import.roads_gen10
 	WHERE
@@ -121,42 +125,46 @@ results in:
 ```
 Name  |Value|
 ------|-----|
-length|447  |
+length|1639 |
 ```
 
-So a single (continuous) road in this tile is made from 112 individual LineStrings where most (104) are made from only 2 points. Encode as a vector tile, this road is 447 bytes.
+So a single (continuous) road in this tile is made from 112 individual LineStrings where most (104) are made from only 2 points. Encoded as a vector tile, this road uses 447 bytes. 
 
 What happens if we `ST_LineMerge()` the individual 2-point `LINESTRING`s into one big `MULTILINESTRING`?
 
 ```SQL
 SELECT
-	length(ST_AsMVT(q, 'roads', 4096, 'geom')) as length
+	length(ST_AsMVT(q, 'roads', 4096, 'geom')) AS length
 FROM
 	(
 	SELECT
 		ST_AsMVTGeom(
 			ST_LineMerge( ST_Collect(geometry) ),
 			ST_Transform(ST_MakeEnvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857), 
-			64) AS geom
+			4096, 
+			0) AS geom
 	FROM
 		import.roads_gen10
 	WHERE
 		(geometry && ST_Transform(ST_MakeEnvelope(11.2500, 47.9899, 11.6016, 48.2247, 4326), 3857))
-		AND ref = 'St 2345' ) AS q;
+		AND ref = 'St 2345' ) as q;
 ```
 results in:
 ```
 Name  |Value|
 ------|-----|
-length|102  |
+length|398  |
 ```
-**What!?** 😮 Simply by merging the `LINESTRING`s lossless into a `MULTILINESTRING` we can reduce the size by 75%. I really can't believe that. Let's modify my [cloud-tileserver](https://github.com/henrythasler/cloud-tileserver) to see what that is worth in a real-life scenario:
+
+So simply by merging the `LINESTRING`s into a `MULTILINESTRING` we can reduce the size of this road by 75%. The main reason behind this is, that for each new `LINESTRING` the cursor first has to be moved to the start of the line before the line can be drawn. This can be omitted in a `MULTILINESTRING` if the start point of the new line is the same as the end of the previous line. Maybe I'll write another post to examine that in detail. Until then, please refer to the [Vector Tile Specification](https://github.com/mapbox/vector-tile-spec/tree/master/2.1).
+
+Anyway, let's modify our vector tile provider ([cloud-tileserver](https://github.com/henrythasler/cloud-tileserver)) to see what that is worth in a real-world scenario:
 
 ![](/img/blog/Selection_190.png)
 
 Yes, it works! We now have fewer but larger Features. Exactly what we want. We can merge some other line features (e.g. `waterways`) as well.
 
-But this method is not limited to lines. We can also `ST_Union()` all the building-polygons into one big multipolygon. The size reduction is outstanding, especially with low zoom levels:
+But this method is not limited to lines. We can also `ST_Union()` all the building-polygons into one big multipolygon. The resulting size reduction is outstanding, especially with low zoom levels:
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
@@ -170,7 +178,7 @@ To use this feature, you need to specify a new layer-property (`geom_query`) and
 
 ## GZIP
 
-After reducing the encoded size of the vector tiles, we can further reduce the size by applying a compression algorithm. 
+After reducing the encoded size of the vector tiles, we can further reduce the size by applying a compression algorithm. GZIP is [supported by all available browsers](https://caniuse.com/#search=gzip).
 
 ![](/img/blog/Selection_192.png)
 
@@ -180,7 +188,7 @@ previous step | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
 gzipped | `22 KiB (22382 Bytes)` | `49 KiB (50061 Bytes)`
 reduction | **29%** | **32%**
 
-This will not only help to save storage costs but also reduce the load time for the end-user.
+This will not only help to save storage costs but also reduce the loading time for the end-user.
 
 ## Summary
 
@@ -190,6 +198,7 @@ Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
 IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
 64 coordinate unit buffer | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
 Merge Features | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
+saved | **52%** | **79%**
 gzipped | `22 KiB (22382 Bytes)` | `49 KiB (50061 Bytes)`
 saved overall | **66%** | **86%**
 
@@ -197,3 +206,4 @@ saved overall | **66%** | **86%**
 
 - [Vector tile specification](https://docs.mapbox.com/vector-tiles/specification/)
 - [Mapbox Vector Tile (MVT) Comparison and Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector)
+- [cloud-tileserver](https://github.com/henrythasler/cloud-tileserver)
