@@ -7,11 +7,11 @@ tags: [gis, maps, vectortiles]
 
 In my [Observable Vector Tile Dissector](https://observablehq.com/@henrythasler/mapbox-vector-tile-dissector) I evaluate different vector tile provider regarding the tilesize they deliver. The limits I chose are ~~purely random~~ based on long experience... But what would one do to actually reduce the tile size. I will try to optimize [my own vector tiles](https://cyclemap.link) and explain the steps involved.
 
-I assume that all spatial data is available via a [postgis](https://postgis.net/) database in web mercator ([EPSG:3857](https://epsg.io/3857)) projection.
+I assume that all spatial data is based on [OpenStreetMap](https://www.openstreetmap.org) and available via a [postgis](https://postgis.net/) database in web mercator ([EPSG:3857](https://epsg.io/3857)) projection.
 
 ## TL;DR
 
-By applying different methods, we can reduce the size of a given vector tile to just **14% of the original size**. The methods described below are:
+By applying different methods, we can reduce the size of a given vector tile to just **14% of the original size**. The lossless methods described below are:
 
 - [Remove unused data](#Identifier)
 - [Reduce tile buffer](#Tile%20Buffer)
@@ -50,9 +50,9 @@ Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
 Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
 IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
-reduction | **20%** | **21%**
+relative size | **80%** | **79%**
 
-Great, just by removing this unused property we have saved 20%! 
+Great, just by removing this unused property we have saved around 20%! 
 
 In some cases it might make sense to attach an ID to a feature if you need that reference to load additional information later on (e.g. `onClick()` event). Azure Maps is doing that for example:  
 
@@ -62,7 +62,7 @@ Anyway, let's see if we can squeeze the tiles some more.
 
 ## Tile Buffer
 
-I a recent post, I wrote about [tile buffers](https://blog.cyclemap.link/2020-01-25-tilebuffer/). Currently, the vector tiles have a buffer of 256 coordinate units. Let's try to reduce the buffer to 64 units for low zoom levels:
+I a recent post, I wrote about [tile buffers](https://blog.cyclemap.link/2020-01-25-tilebuffer/). Currently, the vector tiles have a buffer of 256 coordinate units. Let's try to reduce the buffer to 64 units:
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
@@ -75,11 +75,11 @@ Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
 previous step | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
 64 coordinate unit buffer | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
-reduction | **2%** | **1%**
+relative size | **98%** | **99%**
 
 ## Merge
 
-Let's look again at some other statistics of our tile:
+Let's look again at some other statistics of our z10-tile:
 
 ![](/img/blog/Selection_184.png)
 
@@ -126,7 +126,7 @@ Name  |Value|
 length|1639 |
 ```
 
-So a single (continuous) road in this tile is made from 112 individual LineStrings where most (104) are made from only 2 points. Encoded as a vector tile, this road uses 447 bytes. 
+So a single (continuous) road in this tile is made from 112 individual LineStrings where most (104) are made from only 2 points. Encoded as a vector tile, this road uses 1639 bytes. 
 
 What happens if we `ST_LineMerge()` the individual 2-point `LINESTRING`s into one big `MULTILINESTRING`?
 
@@ -154,7 +154,7 @@ Name  |Value|
 length|398  |
 ```
 
-So simply by merging the `LINESTRING`s into a `MULTILINESTRING` we can reduce the size of this road by 75%. The main reason behind this is, that for each new `LINESTRING` the cursor first has to be moved to the start of the line before the line can be drawn. This can be omitted in a `MULTILINESTRING` if the start point of the new line is the same as the end of the previous line. Maybe I'll write another post to examine that in detail. Until then, please refer to the [Vector Tile Specification](https://github.com/mapbox/vector-tile-spec/tree/master/2.1).
+So simply by merging the `LINESTRING`s we can reduce the size of this road by 75%. The main reason behind this is, that in a vector tile for each new `LINESTRING` the cursor has to be moved to the start of the line first  before the line can be drawn. This can be omitted in a `LINESTRING` if the start point of the new line is the same as the end of the previous line. Maybe I'll write another post to explain that in detail. Until then, please refer to the [Vector Tile Specification](https://github.com/mapbox/vector-tile-spec/tree/master/2.1).
 
 Anyway, let's modify our vector tile provider ([cloud-tileserver](https://github.com/henrythasler/cloud-tileserver)) to see what that is worth in a real-world scenario:
 
@@ -162,13 +162,13 @@ Anyway, let's modify our vector tile provider ([cloud-tileserver](https://github
 
 Yes, it works! We now have fewer but larger Features. Exactly what we want. We can merge some other line features (e.g. `waterways`) as well.
 
-But this method is not limited to lines. We can also `ST_Union()` all the building-polygons into one big multipolygon. The resulting size reduction is outstanding, especially with low zoom levels:
+But this method is not limited to lines. We can also `ST_Union()` all the building-polygons within a tile into one big multipolygon. The resulting size reduction is outstanding, especially with low zoom levels:
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
 previous step | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
 Merge Features | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
-reduction | **38%** | **74%**
+relative size | **62%** | **26%**
 
 To use this feature, you need to specify a new layer-property (`geom_query`) and also a `GROUP BY` statement for all keys:
 
@@ -176,7 +176,7 @@ To use this feature, you need to specify a new layer-property (`geom_query`) and
 
 ## GZIP
 
-After reducing the encoded size of the vector tiles, we can further reduce the size by applying a compression algorithm. GZIP is [supported by all available browsers](https://caniuse.com/#search=gzip).
+After reducing the encoded size of the vector tiles, we can further reduce the size by applying a compression algorithm. GZIP is [supported by all available browsers](https://caniuse.com/#search=gzip), so no need to worry about compatibility.
 
 ![](/img/blog/Selection_192.png)
 
@@ -184,11 +184,13 @@ Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
 previous step | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
 gzipped | `22 KiB (22382 Bytes)` | `49 KiB (50061 Bytes)`
-reduction | **29%** | **32%**
+relative size | **71%** | **68%**
 
 This will not only help to save storage costs but also reduce the loading time for the end-user.
 
 ## Summary
+
+![](/img/blog/sizechart.png)
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
@@ -196,18 +198,18 @@ Orignal | `64 KiB (64984 Bytes)` | `352 KiB (359820 Bytes)`
 IDs removed | `51 KiB (51966 Bytes)` | `278 KiB (283677 Bytes)`
 64 coordinate unit buffer | `50 KiB (51114 Bytes)` | `276 KiB (282250 Bytes)`
 Merge Features | `31 KiB (31518 Bytes)` | `73 KiB (74081 Bytes)`
-saved | **52%** | **79%**
+relative size | **48%** | **21%**
 gzipped | `22 KiB (22382 Bytes)` | `49 KiB (50061 Bytes)`
-saved overall | **66%** | **86%**
+relative size | **34%** | **14%**
 
 The rendered tiles show some minor differences, mostly due to some features being ordered differently:
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
-Original | ![](/img/blog/Selection_172.png) | ![](/img/blog/Selection_174.png)
-Optimized | ![](/img/blog/Selection_195.png) | ![](/img/blog/Selection_196.png)
+Original | ![](/img/blog/Selection_172.png) 64 KiB | ![](/img/blog/Selection_174.png) 352 KiB
+Optimized | ![](/img/blog/Selection_195.png) 31 KiB | ![](/img/blog/Selection_196.png) 73 KiB
 
-By analyzing the existing vector tiles and spatial data in the database, we were able to significantly reduce the size of a vector tile without reducing the visual experience. The methods shown should be applicable to almost any vector tile server available.
+By analyzing the existing vector tiles and spatial data in the database, we were able to reduce the size of a vector tile to just **21%** (14% incl. compression) of the original size without reducing the visual experience. The methods shown should be applicable to almost any vector tile server available.
 
 I'm looking forward for more ideas on how to reduce the size even more.
 
