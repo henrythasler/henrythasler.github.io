@@ -11,12 +11,16 @@ I assume that all spatial data is based on [OpenStreetMap](https://www.openstree
 
 ## TL;DR
 
-By applying different methods, we can reduce the size of a given vector tile to just **14% of the original size**. The lossless methods described below are:
+By applying different methods, we can reduce the size of a given vector tile to just **14% of the original size**. 
 
-- [Remove unused data](#Identifier)
-- [Reduce tile buffer](#Tile%20Buffer)
-- [Merge features](#Merge)
-- [Compression](#GZIP)
+![](/img/blog/sizechart.png)
+
+The lossless methods described below are:
+
+- [Remove unused data](#identifier)
+- [Reduce tile buffer](#tile-buffer)
+- [Merge features](#merge)
+- [Compression](#gzip)
 
 ## Status Quo
 
@@ -189,8 +193,6 @@ relative size | **71%** | **68%**
 This will not only help to save storage costs but also reduce the loading time for the end-user.
 
 ## Summary
-
-![](/img/blog/sizechart.png)
 
 Tile | `14/8717/5683.mvt` | `10/544/355.mvt`
 ---|---|---
