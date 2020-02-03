@@ -178,6 +178,8 @@ To use this feature, you need to specify a new layer-property (`geom_query`) and
 
 ![](/img/blog/Selection_191.png)
 
+Please keep in mind, that these merging-operations (especially `ST_Union()`) may be very expensive (computational-wise) for the database-server and may slow down un-cached access.
+
 ## GZIP
 
 After reducing the encoded size of the vector tiles, we can further reduce the size by applying a compression algorithm. GZIP is [supported by all available browsers](https://caniuse.com/#search=gzip), so no need to worry about compatibility.
