@@ -1,5 +1,5 @@
 ---
-title: Heavy computing with GLSL
+title: Heavy computing with GLSL - Part 2
 subtitle: Emulated double precision
 tags: [opengl, qt, shader]
 

@@ -1,5 +1,5 @@
 ---
-title: Heavy computing with GLSL
+title: Heavy computing with GLSL - Part 4
 subtitle: NVIDIA optimizations
 tags: [opengl, qt, shader]
 
